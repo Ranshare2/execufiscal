@@ -1,16 +1,13 @@
 {
   "root": "dist/",
   "routes": {
+    "/script.js": "script.js",
     "/**": "index.html"
   },
   "headers": {
-    "/**/*.js": {
-      "Content-Type": "application/javascript"
-    },
     "/script.js": {
+      "Cache-Control": "no-store",
       "Content-Type": "application/javascript"
     }
-  },
-  "clean_urls": true,
-  "error_page": "index.html"
+  }
 }
