@@ -1,6 +1,18 @@
-let tableData = [];
-let currentPage = 1;
-const rowsPerPage = 10;
+// Estado global da aplicação
+const state = {
+  tableData: [],
+  currentPage: 1,
+  rowsPerPage: 10
+};
+
+// Expor funções necessárias ao escopo global
+window.handleFileUpload = handleFileUpload;
+window.generatePetition = generatePetition;
+window.toggleStatus = toggleStatus;
+window.searchTable = searchTable;
+window.filterTable = filterTable;
+window.changePage = changePage;
+window.copyPetitionText = copyPetitionText;
 
 function handleFileUpload() {
   const fileInput = document.getElementById('xlsxInput');
@@ -15,19 +27,14 @@ function handleFileUpload() {
         const worksheet = workbook.Sheets[sheetName];
 
         // Converte os dados e normaliza os nomes das colunas
-        tableData = XLSX.utils.sheet_to_json(worksheet).map((row) => {
-          // Normaliza os nomes das colunas para garantir consistência
-          return {
-            'Certidão Número':
-              row['Certidão Número'] || row['CDA'] || row['Certidão'] || '',
-            'Nome do Contribuinte': row['Nome do Contribuinte'] || '',
-            'CPF/CNPJ': row['CPF/CNPJ'] || 'Não informado',
-            Endereço: row['Endereço'] || '',
-            'Total (Valor atual)':
-              row['Total (Valor atual)'] || 'Não informado',
-            status: 'Pendente',
-          };
-        });
+        state.tableData = XLSX.utils.sheet_to_json(worksheet).map((row) => ({
+          'Certidão Número': row['Certidão Número'] || row['CDA'] || row['Certidão'] || '',
+          'Nome do Contribuinte': row['Nome do Contribuinte'] || '',
+          'CPF/CNPJ': row['CPF/CNPJ'] || 'Não informado',
+          'Endereço': row['Endereço'] || '',
+          'Total (Valor atual)': row['Total (Valor atual)'] || 'Não informado',
+          status: 'Pendente'
+        }));
 
         displayTable();
         updateDashboard();
@@ -37,86 +44,60 @@ function handleFileUpload() {
         showToast('Erro ao processar o arquivo. Verifique o formato.', 'error');
       }
     };
-    reader.onerror = function () {
-      showToast('Erro ao ler o arquivo.', 'error');
-    };
+    reader.onerror = () => showToast('Erro ao ler o arquivo.', 'error');
     reader.readAsArrayBuffer(file);
   }
 }
 
 function displayTable() {
-  const table = document
-    .getElementById('dataTable')
-    .getElementsByTagName('tbody')[0];
+  const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
   table.innerHTML = '';
-  const start = (currentPage - 1) * rowsPerPage;
-  const end = start + rowsPerPage;
-  const pageData = tableData.slice(start, end);
+  const start = (state.currentPage - 1) * state.rowsPerPage;
+  const end = start + state.rowsPerPage;
+  const pageData = state.tableData.slice(start, end);
 
   pageData.forEach((row, index) => {
     const newRow = table.insertRow();
-    newRow.className = `table-row-hover ${
-      row.status === 'Pendente' ? 'status-pending' : 'status-completed'
-    }`;
-
-    // Verifica e formata os dados
-    const certidao =
-      row['Certidão Número'] || row['CDA'] || row['Certidão'] || '';
-    const nome = row['Nome do Contribuinte'] || '';
-    const cpf = row['CPF/CNPJ'] || '';
-    const endereco = row['Endereço'] || '';
-    const valor = row['Total (Valor atual)'] || '';
+    newRow.className = `table-row-hover ${row.status === 'Pendente' ? 'status-pending' : 'status-completed'}`;
 
     newRow.innerHTML = `
-            <td class="align-middle">
-                <span class="fw-semibold">${certidao}</span>
-            </td>
-            <td class="align-middle">
-                <span class="fw-semibold">${nome}</span>
-            </td>
-            <td class="align-middle">
-                <span>${cpf}</span>
-            </td>
-            <td class="align-middle">
-                <div class="text-wrap">
-                    ${endereco}
-                </div>
-            </td>
-            <td class="align-middle text-end fw-bold">
-                ${valor}
-            </td>
-            <td class="align-middle">
-                <span class="badge ${
-                  row.status === 'Pendente' ? 'bg-warning' : 'bg-success'
-                }">${row.status}</span>
-            </td>
-            <td class="align-middle">
-                <div class="btn-group" role="group">
-                    <button class="btn btn-primary btn-sm" 
-                            onclick="generatePetition(${start + index})"
-                            title="Gerar Petição">
-                        <i class="bx bx-file-blank"></i>
-                        <span class="d-none d-md-inline ms-1">Petição</span>
-                    </button>
-                    <button class="btn btn-${
-                      row.status === 'Pendente' ? 'success' : 'warning'
-                    } btn-sm" 
-                            onclick="toggleStatus(${start + index})"
-                            title="${
-                              row.status === 'Pendente' ? 'Concluir' : 'Reabrir'
-                            }">
-                        <i class="bx bx-${
-                          row.status === 'Pendente' ? 'check' : 'refresh'
-                        }"></i>
-                        <span class="d-none d-md-inline ms-1">
-                            ${
-                              row.status === 'Pendente' ? 'Concluir' : 'Reabrir'
-                            }
-                        </span>
-                    </button>
-                </div>
-            </td>
-        `;
+      <td class="align-middle">
+        <span class="fw-semibold">${row['Certidão Número']}</span>
+      </td>
+      <td class="align-middle">
+        <span class="fw-semibold">${row['Nome do Contribuinte']}</span>
+      </td>
+      <td class="align-middle">
+        <span>${row['CPF/CNPJ']}</span>
+      </td>
+      <td class="align-middle">
+        <div class="text-wrap">${row['Endereço']}</div>
+      </td>
+      <td class="align-middle text-end fw-bold">
+        ${row['Total (Valor atual)']}
+      </td>
+      <td class="align-middle">
+        <span class="badge ${row.status === 'Pendente' ? 'bg-warning' : 'bg-success'}">${row.status}</span>
+      </td>
+      <td class="align-middle">
+        <div class="btn-group" role="group">
+          <button class="btn btn-primary btn-sm" 
+                  onclick="generatePetition(${start + index})"
+                  title="Gerar Petição">
+            <i class="bx bx-file-blank"></i>
+            <span class="d-none d-md-inline ms-1">Petição</span>
+          </button>
+          <button class="btn btn-${row.status === 'Pendente' ? 'success' : 'warning'} btn-sm" 
+                  onclick="toggleStatus(${start + index})"
+                  title="${row.status === 'Pendente' ? 'Concluir' : 'Reabrir'}">
+            <i class="bx bx-${row.status === 'Pendente' ? 'check' : 'refresh'}"></i>
+            <span class="d-none d-md-inline ms-1">
+              ${row.status === 'Pendente' ? 'Concluir' : 'Reabrir'}
+            </span>
+          </button>
+        </div>
+      </td>
+    `;
   });
 
   displayPagination();
@@ -126,82 +107,70 @@ function displayTable() {
 function displayPagination() {
   const pagination = document.getElementById('pagination');
   pagination.innerHTML = '';
-  const totalPages = Math.ceil(tableData.length / rowsPerPage);
+  const totalPages = Math.ceil(state.tableData.length / state.rowsPerPage);
 
   // Adiciona botão "Anterior"
   pagination.innerHTML = `
-        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="changePage(${
-              currentPage - 1
-            }, event)">
-                <i class="bx bx-chevron-left"></i>
-            </a>
-        </li>
-    `;
+    <li class="page-item ${state.currentPage === 1 ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="changePage(${state.currentPage - 1}, event)">
+        <i class="bx bx-chevron-left"></i>
+      </a>
+    </li>
+  `;
 
   // Lógica para mostrar páginas ao redor da página atual
-  let startPage = Math.max(1, currentPage - 2);
-  let endPage = Math.min(totalPages, currentPage + 2);
+  let startPage = Math.max(1, state.currentPage - 2);
+  let endPage = Math.min(totalPages, state.currentPage + 2);
 
   if (startPage > 1) {
     pagination.innerHTML += `
-            <li class="page-item">
-                <a class="page-link" href="#" onclick="changePage(1, event)">1</a>
-            </li>
-            ${
-              startPage > 2
-                ? '<li class="page-item disabled"><span class="page-link">...</span></li>'
-                : ''
-            }
-        `;
+      <li class="page-item">
+        <a class="page-link" href="#" onclick="changePage(1, event)">1</a>
+      </li>
+      ${startPage > 2 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
+    `;
   }
 
   for (let i = startPage; i <= endPage; i++) {
     pagination.innerHTML += `
-            <li class="page-item ${i === currentPage ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="changePage(${i}, event)">${i}</a>
-            </li>
-        `;
+      <li class="page-item ${i === state.currentPage ? 'active' : ''}">
+        <a class="page-link" href="#" onclick="changePage(${i}, event)">${i}</a>
+      </li>
+    `;
   }
 
   if (endPage < totalPages) {
     pagination.innerHTML += `
-            ${
-              endPage < totalPages - 1
-                ? '<li class="page-item disabled"><span class="page-link">...</span></li>'
-                : ''
-            }
-            <li class="page-item">
-                <a class="page-link" href="#" onclick="changePage(${totalPages}, event)">${totalPages}</a>
-            </li>
-        `;
+      ${endPage < totalPages - 1 ? '<li class="page-item disabled"><span class="page-link">...</span></li>' : ''}
+      <li class="page-item">
+        <a class="page-link" href="#" onclick="changePage(${totalPages}, event)">${totalPages}</a>
+      </li>
+    `;
   }
 
   // Adiciona botão "Próximo"
   pagination.innerHTML += `
-        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="changePage(${
-              currentPage + 1
-            }, event)">
-                <i class="bx bx-chevron-right"></i>
-            </a>
-        </li>
-    `;
+    <li class="page-item ${state.currentPage === totalPages ? 'disabled' : ''}">
+      <a class="page-link" href="#" onclick="changePage(${state.currentPage + 1}, event)">
+        <i class="bx bx-chevron-right"></i>
+      </a>
+    </li>
+  `;
 }
 
 function changePage(page, event) {
   if (event) {
     event.preventDefault();
   }
-  if (page < 1 || page > Math.ceil(tableData.length / rowsPerPage)) {
+  if (page < 1 || page > Math.ceil(state.tableData.length / state.rowsPerPage)) {
     return;
   }
-  currentPage = page;
+  state.currentPage = page;
   displayTable();
 }
 
 function generatePetition(index) {
-  const data = tableData[index];
+  const data = state.tableData[index];
   if (!data) {
     showToast('Erro ao gerar petição: dados não encontrados', 'error');
     return;
@@ -216,15 +185,7 @@ function generatePetition(index) {
           <h3 style="text-align: center; margin-bottom: 15px;">EXECUÇÃO FISCAL</h3>
    
           <p>
-              O MUNICÍPIO DE MARANGUAPE, pessoa jurídica de direito público interno, inscrito no CNPJ sob nº 07.963.051/0001-68, com endereço no Palácio da Intendência – Gabinete do Prefeito, Rua Major Napoleão Lima, nº 253, Centro, CEP n° 61940-180, por seus Procuradores Judiciais ao final subscritos, vem, respeitosamente, perante Vossa Excelência, propor em face de <strong>${
-                data['Nome do Contribuinte']
-              }</strong>, CPF/CNPJ: <strong>${
-      data['CPF/CNPJ']
-    }</strong>, com endereço na <strong>${
-      data['Endereço']
-    }</strong>, ação de EXECUÇÃO FISCAL DE DÍVIDA ATIVA, proveniente de débito consubstanciado na seguinte Certidão de Inscrição em Dívida Ativa nº <strong>${
-      data['Certidão Número']
-    }</strong>, que integra a presente petição inicial.
+              O MUNICÍPIO DE MARANGUAPE, pessoa jurídica de direito público interno, inscrito no CNPJ sob nº 07.963.051/0001-68, com endereço no Palácio da Intendência – Gabinete do Prefeito, Rua Major Napoleão Lima, nº 253, Centro, CEP n° 61940-180, por seus Procuradores Judiciais ao final subscritos, vem, respeitosamente, perante Vossa Excelência, propor em face de <strong>${data['Nome do Contribuinte']}</strong>, CPF/CNPJ: <strong>${data['CPF/CNPJ']}</strong>, com endereço na <strong>${data['Endereço']}</strong>, ação de EXECUÇÃO FISCAL DE DÍVIDA ATIVA, proveniente de débito consubstanciado na seguinte Certidão de Inscrição em Dívida Ativa nº <strong>${data['Certidão Número']}</strong>, que integra a presente petição inicial.
           </p>
    
           <p>Para tanto, requer:</p>
@@ -236,17 +197,11 @@ function generatePetition(index) {
           </ol>
    
           <p>
-              Atribui-se à causa o valor atualizado de <strong>${
-                data['Total (Valor atual)']
-              }</strong> (${valorPorExtenso(
-      data['Total (Valor atual)']
-    )}), consoante o disposto no art. 6º, §4º, da Lei de Execuções Fiscais.
+              Atribui-se à causa o valor atualizado de <strong>${data['Total (Valor atual)']}</strong> (${valorPorExtenso(data['Total (Valor atual)'])}), consoante o disposto no art. 6º, §4º, da Lei de Execuções Fiscais.
           </p>
    
           <p>
-              Por oportuno, requer a juntada da Certidão da Dívida Ativa nº <strong>${
-                data['Certidão Número']
-              }</strong>, bem como do Termo de Inscrição Consolidado.
+              Por oportuno, requer a juntada da Certidão da Dívida Ativa nº <strong>${data['Certidão Número']}</strong>, bem como do Termo de Inscrição Consolidado.
           </p>
    
           <p style="text-align: left; margin-top: 20px;">
@@ -259,24 +214,22 @@ function generatePetition(index) {
           </p>
    
           <p style="text-align: left; margin-top: 40px;">
-   <strong>Francisco Regis Freitas Matos</strong><br>
-   Procurador-Geral do Município de Maranguape<br>
-   OAB/CE nº 9.750
-</p>
+            <strong>Francisco Regis Freitas Matos</strong><br>
+            Procurador-Geral do Município de Maranguape<br>
+            OAB/CE nº 9.750
+          </p>
 
-<p style="text-align: left; margin-top: 20px;">
-   <strong>Edmar Nunes</strong><br>
-   Assessor Jurídico<br>
-   OAB/CE n° 31.552
-</p>
+          <p style="text-align: left; margin-top: 20px;">
+            <strong>Edmar Nunes</strong><br>
+            Assessor Jurídico<br>
+            OAB/CE n° 31.552
+          </p>
         </div>
-      `;
+    `;
 
     try {
       document.getElementById('petitionText').innerHTML = petitionText;
-      const petitionModal = new bootstrap.Modal(
-        document.getElementById('petitionModal')
-      );
+      const petitionModal = new bootstrap.Modal(document.getElementById('petitionModal'));
       petitionModal.show();
     } catch (error) {
       console.error('Erro ao gerar petição:', error);
@@ -291,11 +244,7 @@ function generatePetition(index) {
           <h3 style="text-align: center; margin-bottom: 15px;">EXECUÇÃO FISCAL</h3>
    
           <p>
-              O MUNICÍPIO DE MARANGUAPE, pessoa jurídica de direito público interno, inscrito no CNPJ sob nº 07.963.051/0001-68, com endereço no Palácio da Intendência – Gabinete do Prefeito, Rua Major Napoleão Lima, nº 253, Centro, CEP n° 61940-180, por seus Procuradores Judiciais ao final subscritos, vem, respeitosamente, perante Vossa Excelência, propor em face de <strong>${
-                data['Nome do Contribuinte']
-              }</strong>, com endereço na <strong>${
-      data['Endereço']
-    }</strong>, ação de EXECUÇÃO FISCAL DE DÍVIDA ATIVA, nos seguintes termos:
+              O MUNICÍPIO DE MARANGUAPE, pessoa jurídica de direito público interno, inscrito no CNPJ sob nº 07.963.051/0001-68, com endereço no Palácio da Intendência – Gabinete do Prefeito, Rua Major Napoleão Lima, nº 253, Centro, CEP n° 61940-180, por seus Procuradores Judiciais ao final subscritos, vem, respeitosamente, perante Vossa Excelência, propor em face de <strong>${data['Nome do Contribuinte']}</strong>, com endereço na <strong>${data['Endereço']}</strong>, ação de EXECUÇÃO FISCAL DE DÍVIDA ATIVA, nos seguintes termos:
           </p>
    
           <p>
@@ -330,9 +279,7 @@ function generatePetition(index) {
           </p>
    
           <p>
-              O débito executado está consubstanciado na Certidão de Dívida Ativa nº <strong>${
-                data['Certidão Número']
-              }</strong>, que segue anexa e integra a presente petição inicial para todos os fins de direito.
+              O débito executado está consubstanciado na Certidão de Dívida Ativa nº <strong>${data['Certidão Número']}</strong>, que segue anexa e integra a presente petição inicial para todos os fins de direito.
           </p>
    
           <p>Para tanto, requer:</p>
@@ -344,17 +291,11 @@ function generatePetition(index) {
           </ol>
    
           <p>
-              Atribui-se à causa o valor atualizado de <strong>${
-                data['Total (Valor atual)']
-              }</strong> (${valorPorExtenso(
-      data['Total (Valor atual)']
-    )}), consoante o disposto no art. 6º, §4º, da Lei de Execuções Fiscais.
+              Atribui-se à causa o valor atualizado de <strong>${data['Total (Valor atual)']}</strong> (${valorPorExtenso(data['Total (Valor atual)'])}), consoante o disposto no art. 6º, §4º, da Lei de Execuções Fiscais.
           </p>
    
           <p>
-              Por oportuno, requer a juntada da Certidão da Dívida Ativa nº <strong>${
-                data['Certidão Número']
-              }</strong>, bem como do Termo de Inscrição Consolidado.
+              Por oportuno, requer a juntada da Certidão da Dívida Ativa nº <strong>${data['Certidão Número']}</strong>, bem como do Termo de Inscrição Consolidado.
           </p>
    
           <p style="text-align: left; margin-top: 20px;">
@@ -367,24 +308,22 @@ function generatePetition(index) {
           </p>
    
           <p style="text-align: left; margin-top: 40px;">
-   <strong>Francisco Regis Freitas Matos</strong><br>
-   Procurador-Geral do Município de Maranguape<br>
-   OAB/CE nº 9.750
-</p>
+            <strong>Francisco Regis Freitas Matos</strong><br>
+            Procurador-Geral do Município de Maranguape<br>
+            OAB/CE nº 9.750
+          </p>
 
-<p style="text-align: left; margin-top: 20px;">
-   <strong>Edmar Nunes</strong><br>
-   Assessor Jurídico<br>
-   OAB/CE n° 31.552
-</p>
+          <p style="text-align: left; margin-top: 20px;">
+            <strong>Edmar Nunes</strong><br>
+            Assessor Jurídico<br>
+            OAB/CE n° 31.552
+          </p>
         </div>
       `;
 
     try {
       document.getElementById('petitionText').innerHTML = petitionText;
-      const petitionModal = new bootstrap.Modal(
-        document.getElementById('petitionModal')
-      );
+      const petitionModal = new bootstrap.Modal(document.getElementById('petitionModal'));
       petitionModal.show();
     } catch (error) {
       console.error('Erro ao gerar petição:', error);
@@ -394,25 +333,19 @@ function generatePetition(index) {
 }
 
 function toggleStatus(index) {
-  if (tableData[index]) {
-    tableData[index].status =
-      tableData[index].status === 'Pendente' ? 'Concluída' : 'Pendente';
+  if (state.tableData[index]) {
+    state.tableData[index].status = state.tableData[index].status === 'Pendente' ? 'Concluída' : 'Pendente';
     displayTable();
     updateDashboard();
-    showToast(
-      `Petição ${tableData[index].status.toLowerCase()} com sucesso!`,
-      'success'
-    );
+    showToast(`Petição ${state.tableData[index].status.toLowerCase()} com sucesso!`, 'success');
   }
 }
 
 function updateDashboard() {
-  const totalCount = tableData.length;
-  const completedCount = tableData.filter(
-    (row) => row.status === 'Concluída'
-  ).length;
+  const totalCount = state.tableData.length;
+  const completedCount = state.tableData.filter(row => row.status === 'Concluída').length;
   const pendingCount = totalCount - completedCount;
-  const totalValue = tableData.reduce((sum, row) => {
+  const totalValue = state.tableData.reduce((sum, row) => {
     const value = String(row['Total (Valor atual)'])
       .replace('R$', '')
       .replace(/\./g, '')
@@ -424,21 +357,18 @@ function updateDashboard() {
   document.getElementById('totalPetitions').textContent = totalCount;
   document.getElementById('pendingPetitions').textContent = pendingCount;
   document.getElementById('completedPetitions').textContent = completedCount;
-  document.getElementById(
-    'totalValue'
-  ).textContent = `R$ ${totalValue.toLocaleString('pt-BR', {
+  document.getElementById('totalValue').textContent = `R$ ${totalValue.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 2
   })}`;
 }
 
 function searchTable() {
   const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-  const filteredData = tableData.filter(
-    (row) =>
-      String(row['Certidão Número']).toLowerCase().includes(searchTerm) ||
-      String(row['Nome do Contribuinte']).toLowerCase().includes(searchTerm) ||
-      String(row['CPF/CNPJ']).toLowerCase().includes(searchTerm)
+  const filteredData = state.tableData.filter(row =>
+    String(row['Certidão Número']).toLowerCase().includes(searchTerm) ||
+    String(row['Nome do Contribuinte']).toLowerCase().includes(searchTerm) ||
+    String(row['CPF/CNPJ']).toLowerCase().includes(searchTerm)
   );
   displayFilteredTable(filteredData);
 }
@@ -446,35 +376,29 @@ function searchTable() {
 function filterTable(status) {
   let filteredData;
   if (status === 'all') {
-    filteredData = tableData;
+    filteredData = state.tableData;
   } else if (status === 'completed') {
-    filteredData = tableData.filter((row) => row.status === 'Concluída');
+    filteredData = state.tableData.filter(row => row.status === 'Concluída');
   } else {
-    filteredData = tableData.filter((row) => row.status === 'Pendente');
+    filteredData = state.tableData.filter(row => row.status === 'Pendente');
   }
   displayFilteredTable(filteredData);
 }
 
 function displayFilteredTable(filteredData) {
-  const table = document
-    .getElementById('dataTable')
-    .getElementsByTagName('tbody')[0];
+  const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
   table.innerHTML = '';
 
   filteredData.forEach((row, index) => {
     const newRow = table.insertRow();
-    newRow.className = `table-row-hover ${
-      row.status === 'Pendente' ? 'status-pending' : 'status-completed'
-    }`;
+    newRow.className = `table-row-hover ${row.status === 'Pendente' ? 'status-pending' : 'status-completed'}`;
 
     newRow.innerHTML = `
             <td class="align-middle">
                 <span class="fw-semibold">${row['Certidão Número'] || ''}</span>
             </td>
             <td class="align-middle">
-                <span class="fw-semibold">${
-                  row['Nome do Contribuinte'] || ''
-                }</span>
+                <span class="fw-semibold">${row['Nome do Contribuinte'] || ''}</span>
             </td>
             <td class="align-middle">
                 <span>${row['CPF/CNPJ'] || ''}</span>
@@ -488,9 +412,7 @@ function displayFilteredTable(filteredData) {
                 ${row['Total (Valor atual)'] || ''}
             </td>
             <td class="align-middle">
-                <span class="badge ${
-                  row.status === 'Pendente' ? 'bg-warning' : 'bg-success'
-                }">${row.status}</span>
+                <span class="badge ${row.status === 'Pendente' ? 'bg-warning' : 'bg-success'}">${row.status}</span>
             </td>
             <td class="align-middle">
                 <div class="btn-group" role="group">
@@ -500,20 +422,12 @@ function displayFilteredTable(filteredData) {
                         <i class="bx bx-file-blank"></i>
                         <span class="d-none d-md-inline ms-1">Petição</span>
                     </button>
-                    <button class="btn btn-${
-                      row.status === 'Pendente' ? 'success' : 'warning'
-                    } btn-sm" 
+                    <button class="btn btn-${row.status === 'Pendente' ? 'success' : 'warning'} btn-sm" 
                             onclick="toggleStatus(${index})"
-                            title="${
-                              row.status === 'Pendente' ? 'Concluir' : 'Reabrir'
-                            }">
-                        <i class="bx bx-${
-                          row.status === 'Pendente' ? 'check' : 'refresh'
-                        }"></i>
+                            title="${row.status === 'Pendente' ? 'Concluir' : 'Reabrir'}">
+                        <i class="bx bx-${row.status === 'Pendente' ? 'check' : 'refresh'}"></i>
                         <span class="d-none d-md-inline ms-1">
-                            ${
-                              row.status === 'Pendente' ? 'Concluir' : 'Reabrir'
-                            }
+                            ${row.status === 'Pendente' ? 'Concluir' : 'Reabrir'}
                         </span>
                     </button>
                 </div>
@@ -523,22 +437,17 @@ function displayFilteredTable(filteredData) {
 }
 
 function showToast(message, type = 'info') {
-  const icon =
-    type === 'success'
-      ? 'bx-check-circle'
-      : type === 'error'
-      ? 'bx-x-circle'
-      : 'bx-info-circle';
+  const icon = type === 'success' ? 'bx-check-circle' : type === 'error' ? 'bx-x-circle' : 'bx-info-circle';
 
   Toastify({
     node: (() => {
       const node = document.createElement('div');
       node.innerHTML = `
-                <div class="toastify-content">
-                    <i class="bx ${icon} toastify-icon"></i>
-                    <div class="toastify-text">${message}</div>
-                </div>
-            `;
+        <div class="toastify-content">
+            <i class="bx ${icon} toastify-icon"></i>
+            <div class="toastify-text">${message}</div>
+        </div>
+      `;
       return node;
     })(),
     duration: 3000,
@@ -547,15 +456,13 @@ function showToast(message, type = 'info') {
     position: 'right',
     className: `rounded toast-${type}`,
     stopOnFocus: true,
-    onClick: function () {}, // Prevents auto-dismissal on click
+    onClick: function() {}
   }).showToast();
 }
 
 function copyPetitionText() {
   const petitionText = document.getElementById('petitionText').innerHTML;
-  const blob = new Blob([`<html><body>${petitionText}</body></html>`], {
-    type: 'text/html',
-  });
+  const blob = new Blob([`<html><body>${petitionText}</body></html>`], { type: 'text/html' });
   const clipboardItem = new ClipboardItem({ 'text/html': blob });
 
   navigator.clipboard.write([clipboardItem]).then(
@@ -692,16 +599,16 @@ function valorPorExtenso(valor) {
     const milhares = converterMilhares(reais);
     const centenas = converterGrupo(reais % 1000);
 
-    extenso =
-      [milhoes, milhares, centenas].filter((parte) => parte !== '').join(' ') +
+    extenso = [milhoes, milhares, centenas]
+      .filter(parte => parte !== '')
+      .join(' ') +
       (reais === 1 ? ' real' : ' reais');
   }
 
   // Converter centavos
   if (centavos > 0) {
     if (reais > 0) extenso += ' e ';
-    extenso +=
-      converterGrupo(centavos) + (centavos === 1 ? ' centavo' : ' centavos');
+    extenso += converterGrupo(centavos) + (centavos === 1 ? ' centavo' : ' centavos');
   }
 
   // Capitalizar primeira letra
@@ -709,15 +616,13 @@ function valorPorExtenso(valor) {
 }
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
   // Event listeners
-  document
-    .getElementById('xlsxInput')
-    .addEventListener('change', handleFileUpload);
+  document.getElementById('xlsxInput').addEventListener('change', handleFileUpload);
   document.getElementById('searchInput').addEventListener('input', searchTable);
 
   // Event listeners para os botões de filtro
-  document.querySelectorAll('[data-filter]').forEach((button) => {
+  document.querySelectorAll('[data-filter]').forEach(button => {
     button.addEventListener('click', () => filterTable(button.dataset.filter));
   });
 
