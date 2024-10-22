@@ -52,8 +52,8 @@ window.generatePetition = function(index) {
     return;
   }
 
-  // Se tem CPF/CNPJ gera petição normal, se não tem gera alternativa
-  if (data['CPF/CNPJ'] && data['CPF/CNPJ'] !== 'Não informado') {
+  // Se CPF/CNPJ for "Não informado", gera petição com fundamentação legal
+  if (data['CPF/CNPJ'] === 'Não informado') {
     const petitionText = `
         <div class="petition-content" style="text-align: justify; font-family: Arial, sans-serif; line-height: 1.5;">
           <p style="text-align: right;">AO JUÍZO DA VARA CÍVEL DA COMARCA DE MARANGUAPE-CE</p>
@@ -61,7 +61,42 @@ window.generatePetition = function(index) {
           <h3 style="text-align: center; margin-bottom: 15px;">EXECUÇÃO FISCAL</h3>
    
           <p>
-              O MUNICÍPIO DE MARANGUAPE, pessoa jurídica de direito público interno, inscrito no CNPJ sob nº 07.963.051/0001-68, com endereço no Palácio da Intendência – Gabinete do Prefeito, Rua Major Napoleão Lima, nº 253, Centro, CEP n° 61940-180, por seus Procuradores Judiciais ao final subscritos, vem, respeitosamente, perante Vossa Excelência, propor em face de <strong>${data['Nome do Contribuinte']}</strong>, CPF/CNPJ: <strong>${data['CPF/CNPJ']}</strong>, com endereço na <strong>${data['Endereço']}</strong>, ação de EXECUÇÃO FISCAL DE DÍVIDA ATIVA, proveniente de débito consubstanciado na seguinte Certidão de Inscrição em Dívida Ativa nº <strong>${data['Certidão Número']}</strong>, que integra a presente petição inicial.
+              O MUNICÍPIO DE MARANGUAPE, pessoa jurídica de direito público interno, inscrito no CNPJ sob nº 07.963.051/0001-68, com endereço no Palácio da Intendência – Gabinete do Prefeito, Rua Major Napoleão Lima, nº 253, Centro, CEP n° 61940-180, por seus Procuradores Judiciais ao final subscritos, vem, respeitosamente, perante Vossa Excelência, propor em face de <strong>${data['Nome do Contribuinte']}</strong>, com endereço na <strong>${data['Endereço']}</strong>, ação de EXECUÇÃO FISCAL DE DÍVIDA ATIVA, nos seguintes termos:
+          </p>
+   
+          <p>
+              Ab initio, cumpre destacar que a presente execução fiscal atende aos requisitos estabelecidos no Código Tributário Nacional, bem como na Lei Federal nº. 6.830/80 - Lei de Execução Fiscal, observando-se e aplicando todas as formalidades do título executivo, sendo este líquido, certo e exigível.
+          </p>
+   
+          <p>
+              Reza o artigo 6º da Lei nº. 6.830/80 – LEF:
+          </p>
+   
+          <blockquote style="margin-left: 20px; font-style: italic;">
+              "Art. 6º - A petição inicial indicará apenas:<br>
+              I - o Juiz a quem é dirigida;<br>
+              II - o pedido; e<br>
+              III - o requerimento para a citação."
+          </blockquote>
+   
+          <p>
+              Por sua vez, a Certidão de Dívida Ativa que instrui a inicial deverá conter os mesmos elementos do Termo de Inscrição em Dívida Ativa, nos moldes do § 5º, do art. 2º da lei supracitada, dentre os quais não se encontra elencado o CPF ou CNPJ do executado.
+          </p>
+   
+          <p>
+              Mesmo que aplicando-se os requisitos do art. 319 do CPC, ainda assim não seria admissível o indeferimento da petição inicial por ausência dos dados qualitativos faltantes, conforme dispõe o § 2º do citado artigo:
+          </p>
+   
+          <blockquote style="margin-left: 20px; font-style: italic;">
+              "§ 2º A petição inicial não será indeferida se, a despeito da falta de informações a que se refere o inciso II, for possível a citação do réu."
+          </blockquote>
+   
+          <p>
+              Cumpre destacar o teor da Súmula 558 do Superior Tribunal de Justiça: "Em ações de execução fiscal, a petição inicial não pode ser indeferida sob o fundamento da ausência de indicação do CPF e/ou RG ou CNPJ do executado."
+          </p>
+   
+          <p>
+              O débito executado está consubstanciado na Certidão de Dívida Ativa nº <strong>${data['Certidão Número']}</strong>, que segue anexa e integra a presente petição inicial para todos os fins de direito.
           </p>
    
           <p>Para tanto, requer:</p>
@@ -112,7 +147,7 @@ window.generatePetition = function(index) {
       showToast('Erro ao gerar petição. Por favor, tente novamente.', 'error');
     }
   } else {
-    // Gera petição sem CPF/CNPJ com fundamentação legal
+    // Para todos os outros casos, gera a petição padrão incluindo o CPF/CNPJ
     const petitionText = `
         <div class="petition-content" style="text-align: justify; font-family: Arial, sans-serif; line-height: 1.5;">
           <p style="text-align: right;">AO JUÍZO DA VARA CÍVEL DA COMARCA DE MARANGUAPE-CE</p>
@@ -120,42 +155,7 @@ window.generatePetition = function(index) {
           <h3 style="text-align: center; margin-bottom: 15px;">EXECUÇÃO FISCAL</h3>
    
           <p>
-              O MUNICÍPIO DE MARANGUAPE, pessoa jurídica de direito público interno, inscrito no CNPJ sob nº 07.963.051/0001-68, com endereço no Palácio da Intendência – Gabinete do Prefeito, Rua Major Napoleão Lima, nº 253, Centro, CEP n° 61940-180, por seus Procuradores Judiciais ao final subscritos, vem, respeitosamente, perante Vossa Excelência, propor em face de <strong>${data['Nome do Contribuinte']}</strong>, com endereço na <strong>${data['Endereço']}</strong>, ação de EXECUÇÃO FISCAL DE DÍVIDA ATIVA, nos seguintes termos:
-          </p>
-   
-          <p>
-              Ab initio, cumpre destacar que a presente execução fiscal atende aos requisitos estabelecidos no Código Tributário Nacional, bem como na Lei Federal nº. 6.830/80 - Lei de Execução Fiscal, observando-se e aplicando todas as formalidades do título executivo, sendo este líquido, certo e exigível.
-          </p>
-   
-          <p>
-              Reza o artigo 6º da Lei nº. 6.830/80 – LEF:
-          </p>
-   
-          <blockquote style="margin-left: 20px; font-style: italic;">
-              "Art. 6º - A petição inicial indicará apenas:<br>
-              I - o Juiz a quem é dirigida;<br>
-              II - o pedido; e<br>
-              III - o requerimento para a citação."
-          </blockquote>
-   
-          <p>
-              Por sua vez, a Certidão de Dívida Ativa que instrui a inicial deverá conter os mesmos elementos do Termo de Inscrição em Dívida Ativa, nos moldes do § 5º, do art. 2º da lei supracitada, dentre os quais não se encontra elencado o CPF ou CNPJ do executado.
-          </p>
-   
-          <p>
-              Mesmo que aplicando-se os requisitos do art. 319 do CPC, ainda assim não seria admissível o indeferimento da petição inicial por ausência dos dados qualitativos faltantes, conforme dispõe o § 2º do citado artigo:
-          </p>
-   
-          <blockquote style="margin-left: 20px; font-style: italic;">
-              "§ 2º A petição inicial não será indeferida se, a despeito da falta de informações a que se refere o inciso II, for possível a citação do réu."
-          </blockquote>
-   
-          <p>
-              Cumpre destacar o teor da Súmula 558 do Superior Tribunal de Justiça: "Em ações de execução fiscal, a petição inicial não pode ser indeferida sob o fundamento da ausência de indicação do CPF e/ou RG ou CNPJ do executado."
-          </p>
-   
-          <p>
-              O débito executado está consubstanciado na Certidão de Dívida Ativa nº <strong>${data['Certidão Número']}</strong>, que segue anexa e integra a presente petição inicial para todos os fins de direito.
+              O MUNICÍPIO DE MARANGUAPE, pessoa jurídica de direito público interno, inscrito no CNPJ sob nº 07.963.051/0001-68, com endereço no Palácio da Intendência – Gabinete do Prefeito, Rua Major Napoleão Lima, nº 253, Centro, CEP n° 61940-180, por seus Procuradores Judiciais ao final subscritos, vem, respeitosamente, perante Vossa Excelência, propor em face de <strong>${data['Nome do Contribuinte']}</strong>, CPF/CNPJ: <strong>${data['CPF/CNPJ']}</strong>, com endereço na <strong>${data['Endereço']}</strong>, ação de EXECUÇÃO FISCAL DE DÍVIDA ATIVA, proveniente de débito consubstanciado na seguinte Certidão de Inscrição em Dívida Ativa nº <strong>${data['Certidão Número']}</strong>, que integra a presente petição inicial.
           </p>
    
           <p>Para tanto, requer:</p>
